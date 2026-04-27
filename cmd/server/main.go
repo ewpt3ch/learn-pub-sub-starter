@@ -3,9 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -28,16 +27,37 @@ func main() {
 		log.Fatalf("rabbit channel failed: %v", err)
 	}
 
-	err = pubsub.PublishJSON(rabbitChannel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{
-		IsPaused: true,
-	})
-	if err != nil {
-		fmt.Printf("failed to send message: %v", err)
-	}
+	gamelogic.PrintServerHelp()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	sig := <-sigChan
-	fmt.Printf("stopping server, %v", sig)
+	for {
+		commands := gamelogic.GetInput()
+		command := commands[0]
+		switch command {
+		case "pause":
+			fmt.Println("sending pause message")
+			err = pubsub.PublishJSON(rabbitChannel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{
+				IsPaused: true,
+			})
+			if err != nil {
+				fmt.Printf("failed to send message: %v", err)
+			}
+
+		case "resume":
+			fmt.Println("resuming game")
+			err = pubsub.PublishJSON(rabbitChannel, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{
+				IsPaused: false,
+			})
+
+		case "quit":
+			fmt.Println("quiting")
+			return
+
+		default:
+			fmt.Println("command not understood")
+			continue
+
+		}
+
+	}
 
 }
