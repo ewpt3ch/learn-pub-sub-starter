@@ -6,6 +6,7 @@ import (
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -26,16 +27,18 @@ func main() {
 		log.Fatalf("issue getting username: %v", err)
 	}
 
-	qKey := "pause"
-	qName := fmt.Sprintf("%s.%s", qKey, userName)
+	gs := gamelogic.NewGameState(userName)
 
-	_, queue, err := pubsub.DeclareAndBind(rClient, "peril_direct", qName, qKey, pubsub.SimpleQueueTransient)
+	err = pubsub.SubscribeJSON(
+		rClient,
+		routing.ExchangePerilDirect,
+		routing.PauseKey+"."+gs.GetUsername(),
+		routing.PauseKey,
+		pubsub.SimpleQueueTransient,
+		handlerPause(gs))
 	if err != nil {
-		fmt.Printf("declare and bind failed: %v", err)
+		log.Fatalf("failed to create and subscribe to queue: %v", err)
 	}
-	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
-
-	gameState := gamelogic.NewGameState(userName)
 
 	for {
 
@@ -43,14 +46,13 @@ func main() {
 		command := commands[0]
 		switch command {
 		case "spawn":
-			err := gameState.CommandSpawn(commands)
+			err := gs.CommandSpawn(commands)
 			if err != nil {
 				fmt.Printf("spawn error: %v", err)
-				break
 			}
 
 		case "move":
-			army, err := gameState.CommandMove(commands)
+			army, err := gs.CommandMove(commands)
 			if err != nil {
 				fmt.Printf("move failed: %v", err)
 				break
@@ -59,7 +61,7 @@ func main() {
 			fmt.Printf("Army %v moved\n", army)
 
 		case "status":
-			gameState.CommandStatus()
+			gs.CommandStatus()
 
 		case "help":
 			gamelogic.PrintClientHelp()

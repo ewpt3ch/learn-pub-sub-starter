@@ -27,6 +27,12 @@ func main() {
 		log.Fatalf("rabbit channel failed: %v", err)
 	}
 
+	_, q, err := pubsub.DeclareAndBind(rClient, routing.ExchangePerilDirect, routing.GameLogSlug, "game_logs.*", pubsub.SimpleQueueDurable)
+	if err != nil {
+		log.Fatalf("error creating queue: %v", err)
+	}
+	fmt.Printf("queue %v created", q)
+
 	gamelogic.PrintServerHelp()
 
 	for {
