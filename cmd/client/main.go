@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -12,6 +10,8 @@ import (
 )
 
 func main() {
+
+	fmt.Println("Starting Peril client...")
 
 	conString := "amqp://guest:guest@localhost:5672/"
 	rClient, err := amqp.Dial(conString)
@@ -23,22 +23,58 @@ func main() {
 
 	userName, err := gamelogic.ClientWelcome()
 	if err != nil {
-		fmt.Printf("issue getting username: %v", err)
+		log.Fatalf("issue getting username: %v", err)
 	}
 
 	qKey := "pause"
 	qName := fmt.Sprintf("%s.%s", qKey, userName)
 
-	_, _, err = pubsub.DeclareAndBind(rClient, "peril_direct", qName, qKey, pubsub.SimpleQueueTransient)
+	_, queue, err := pubsub.DeclareAndBind(rClient, "peril_direct", qName, qKey, pubsub.SimpleQueueTransient)
 	if err != nil {
 		fmt.Printf("declare and bind failed: %v", err)
 	}
+	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
-	fmt.Println("Starting Peril client...")
+	gameState := gamelogic.NewGameState(userName)
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	sig := <-sigChan
-	fmt.Printf("stopping client, %v", sig)
+	for {
+
+		commands := gamelogic.GetInput()
+		command := commands[0]
+		switch command {
+		case "spawn":
+			err := gameState.CommandSpawn(commands)
+			if err != nil {
+				fmt.Printf("spawn error: %v", err)
+				break
+			}
+
+		case "move":
+			army, err := gameState.CommandMove(commands)
+			if err != nil {
+				fmt.Printf("move failed: %v", err)
+				break
+			}
+
+			fmt.Printf("Army %v moved\n", army)
+
+		case "status":
+			gameState.CommandStatus()
+
+		case "help":
+			gamelogic.PrintClientHelp()
+
+		case "spam":
+			fmt.Println("Spamming not allowed yet!")
+
+		case "quit":
+			gamelogic.PrintQuit()
+			return
+
+		default:
+			fmt.Println("command not understood")
+		}
+
+	}
 
 }
