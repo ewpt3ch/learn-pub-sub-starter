@@ -54,10 +54,7 @@ func main() {
 		routing.ArmyMovesPrefix+"."+userName,
 		routing.ArmyMovesPrefix+".*",
 		pubsub.SimpleQueueTransient,
-		func(move gamelogic.ArmyMove) {
-			gs.HandleMove(move)
-			fmt.Println("> ")
-		},
+		handlerMove(gs),
 	)
 	if err != nil {
 		log.Fatalf("failed to create and subscribe to move queue: %v", err)
