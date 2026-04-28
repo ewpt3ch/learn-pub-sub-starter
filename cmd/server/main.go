@@ -37,6 +37,9 @@ func main() {
 
 	for {
 		commands := gamelogic.GetInput()
+		if len(commands) == 0 {
+			continue
+		}
 		command := commands[0]
 		switch command {
 		case "pause":
