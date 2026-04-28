@@ -54,10 +54,23 @@ func main() {
 		routing.ArmyMovesPrefix+"."+userName,
 		routing.ArmyMovesPrefix+".*",
 		pubsub.SimpleQueueTransient,
-		handlerMove(gs),
+		handlerMove(gs, rabbitChannel),
 	)
 	if err != nil {
 		log.Fatalf("failed to create and subscribe to move queue: %v", err)
+	}
+
+	//war queue
+	err = pubsub.SubscribeJSON(
+		rClient,
+		routing.ExchangePerilTopic,
+		routing.WarRecognitionsPrefix,
+		routing.WarRecognitionsPrefix+".*",
+		pubsub.SimpleQueueDurable,
+		handlerWar(gs),
+	)
+	if err != nil {
+		log.Fatalf("failed to create war queue %v", err)
 	}
 
 	// REPL loop
