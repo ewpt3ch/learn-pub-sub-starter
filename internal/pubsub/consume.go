@@ -22,6 +22,11 @@ func SubscribeJSON[T any](
 	}
 	log.Printf("created queue %v\n", q)
 
+	err = qChannel.Qos(10, 0, false)
+	if err != nil {
+		return err
+	}
+
 	consumeChan, err := qChannel.Consume(queueName, "", false, false, false, false, nil)
 	if err != nil {
 		return err
