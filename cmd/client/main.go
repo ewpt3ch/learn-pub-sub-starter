@@ -67,7 +67,7 @@ func main() {
 		routing.WarRecognitionsPrefix,
 		routing.WarRecognitionsPrefix+".*",
 		pubsub.SimpleQueueDurable,
-		handlerWar(gs),
+		handlerWar(gs, rabbitChannel),
 	)
 	if err != nil {
 		log.Fatalf("failed to create war queue %v", err)
